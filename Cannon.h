@@ -9,5 +9,9 @@ public:
 	~Cannon();
 	void update(int);
 	void show(HDC);
+	POINT getCenterC() { return centerCannon; }
+	POINT getLineG() { return lineGun; }
+	POINT* getGun() { return gun; }
+	int getRad() { return radCannon; }
 };
 

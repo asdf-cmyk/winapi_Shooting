@@ -10,6 +10,9 @@ public:
 	void collision(Object&) {};
 	//void update();
 	void show(HDC);
+	
+	int getWidth() { return width; }
+	int getHeight() { return height; }
 };
 
 //std::vector<Block*> blockCont;

@@ -10,9 +10,9 @@ Block::Block(POINT& cPt, int w, int h)
 	//height = 60;
 	width = w;
 	height = h;
-	speed.x = vector.x = 0;
-	speed.y = height + 2;
-	vector.y = 1;
+	speed.x = vectorX = 0;
+	speed.y = height/2 + 2;
+	vectorY = 1;
 }
 
 Block::~Block()

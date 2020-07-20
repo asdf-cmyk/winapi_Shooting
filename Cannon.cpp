@@ -5,8 +5,8 @@
 Cannon::Cannon()
 	: lineCannon(100), radCannon(0)
 {
-	POINT centerCannon = { 300, 750 };
-	POINT lineGun = { 20, 200 };
+	centerCannon = { 300, 750 };
+	lineGun = { 20, 200 };
 }
 
 Cannon::~Cannon()
@@ -20,12 +20,11 @@ void Cannon::update(int rad)
 		long(double(centerCannon.y) + lineGun.x*sin(2 * acos(0.0) / 180 * (radCannon))) };
 	POINT gunP4 = { long(double(centerCannon.x) - lineGun.x*cos(2 * acos(0.0) / 180 * (radCannon))),
 		long(double(centerCannon.y) - lineGun.x*sin(2 * acos(0.0) / 180 * (radCannon))) };
-	POINT gun[4] =
-	{ { long(double(gunP4.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
-		long(double(gunP4.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) },
-		{ long(double(gunP3.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
-		long(double(gunP3.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) },
-		gunP3, gunP4 };
+	gun[0] = { long(double(gunP4.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
+	long(double(gunP4.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) };
+	gun[1] = { long(double(gunP3.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
+	long(double(gunP3.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) };
+	gun[2] = gunP3; gun[3] = gunP4;
 }
 
 void Cannon::show(HDC hdc)
@@ -36,8 +35,6 @@ void Cannon::show(HDC hdc)
 	centerCannon.x + lineCannon, centerCannon.y + lineCannon,
 	centerCannon.x + lineCannon, centerCannon.y + lineCannon,
 	centerCannon.x - lineCannon, centerCannon.y + lineCannon);*/
-	Ellipse(hdc, centerCannon.x - lineCannon,
-		centerCannon.y - lineCannon,
-		centerCannon.x + lineCannon,
-		centerCannon.y + lineCannon);
+	Ellipse(hdc, centerCannon.x - lineCannon, centerCannon.y - lineCannon,
+		centerCannon.x + lineCannon, centerCannon.y + lineCannon);
 }

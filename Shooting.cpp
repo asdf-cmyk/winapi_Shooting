@@ -1,10 +1,11 @@
-// Win32Project2.cpp : Defines the entry point for the application.
+// Shooting.cpp : Defines the entry point for the application.
 //
 
-#include "stdafx.h"
+#include "framework.h"
 #include "Shooting.h"
-#include "Resource.h"
 #include "Block.h"
+#include "Cannon.h"
+#include "Bullet.h"
 #include <vector>
 #include <random>
 #include <memory>
@@ -38,15 +39,23 @@ int mkRand(int range)
 }
 
 void startScene(HDC);
-void gameScene(HDC);
+void gameScene(HDC, HWND);
 void endScene(HDC);
 
 static TCHAR idStr[4] = L"ABC";
 static int score;
-static int radCannon;
-static vector<Block*> blockCont;
+static int radCannon = 0;
+vector<Block*> blockCont;
+Cannon cannon;
+vector<Bullet*> bulletCont;
+RECT rectView;
+//Bullet bullet(cannon);
 
 
+void CALLBACK timer2(HWND hWnd, UINT uMsg, UINT idEvent, DWORD dwTime)
+{
+	bulletCont.push_back(new Bullet(cannon, rectView));
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -156,12 +165,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HDC hdc;
 	//static int count, yPos, x, y, r3;
 	static int mx, my, frame, gameMode;
-	//RECT rt = { 0, yPos, 1000, 500 };
-	static RECT rectView;
+	//static RECT rectView;
 	static int scene, sceneState, cnt;
-	static int score;
 	/*static TCHAR idStr[4] = L"ABC";
 	static vector<Block*> rectCont;*/
+	static int timer2Flag = 0;
 
 	switch (message)
 	{
@@ -217,12 +225,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			startScene(hdc);
 			break;
 		case 2:
-			gameScene(hdc);
+			gameScene(hdc, hWnd);
+			SetTimer(hWnd, 1, 1000, NULL);
+			//SetTimer(hWnd, 2, 999, (TIMERPROC)timer2);
+			SetTimer(hWnd, 2, 999, NULL);
 			break;
 		}
 
-		SetTimer(hWnd, 1, 1000, NULL);
-		SetTimer(hWnd, 2, 300, NULL);
+		//SetTimer(hWnd, 1, 1000, NULL);
+		//SetTimer(hWnd, 2, 999, NULL);
 		EndPaint(hWnd, &ps);
 	}
 	break;
@@ -231,7 +242,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			mx = LOWORD(lParam);
 			my = HIWORD(lParam);
-			
+
 		}
 		InvalidateRgn(hWnd, NULL, TRUE);
 	}
@@ -241,13 +252,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case 1:
-			/*POINT tmP;
+			POINT tmP;
 			for (int i = 0; i < 6; i++)
 			{
 				int width = (rectView.right - rectView.left) / 6;
 				tmP = { width - width/2 + i*width + 2, 90 };
 				blockCont.push_back(new Block(tmP, width, 40));
-			}*/
+			}
+			break;
+		case 2:
+			//timer2Flag = 1;
+			bulletCont.push_back(new Bullet(cannon, rectView));
 			break;
 		} // wm_Param switch end
 	}
@@ -285,12 +300,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (wParam)
 			{
 			case 'A':
-				if (radCannon - 3 >= -60)
+				if (radCannon - 3 >= -60/* && timer2Flag*/)
+				{
 					radCannon -= 3;
+					//timer2Flag = 0;
+				}
 				break;
 			case 'D':
-				if (radCannon + 3 <= 60)
+				if (radCannon + 3 <= 60 /* && timer2Flag*/)
+				{
 					radCannon += 3;
+					//timer2Flag = 0;
+				}
 				break;
 			}
 			break;
@@ -305,6 +326,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 	case WM_DESTROY:
+		KillTimer(hWnd, 1);
+		KillTimer(hWnd, 2);
+		for (unsigned short i = 0; i < blockCont.size(); i++)
+			delete blockCont[i];
+		for (unsigned short i = 0; i < bulletCont.size(); i++)
+			delete bulletCont[i];
+
 		HideCaret(hWnd);
 		DestroyCaret();
 		PostQuitMessage(0);
@@ -339,13 +367,13 @@ void startScene(HDC hdc)
 {
 	HFONT hFont, OldFont;
 	hFont = CreateFont(100, 60, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0,
-	                    VARIABLE_PITCH | FF_ROMAN, TEXT("HY¿±¼­M"));
+		VARIABLE_PITCH | FF_ROMAN, TEXT("HY¿±¼­M"));
 	OldFont = (HFONT)SelectObject(hdc, hFont);
 	//TextOut(hdc, 160, 140, L"Title", lstrlen(L"Title"));
 	RECT rt = { 0, 0, 600, 400 };
 	DrawText(hdc, L"Title", lstrlen(L"Title"),
 		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-	
+
 	hFont = CreateFont(50, 0, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0,
 		VARIABLE_PITCH | FF_ROMAN, TEXT("HY¿±¼­M"));
 	(HFONT)SelectObject(hdc, hFont);
@@ -357,13 +385,13 @@ void startScene(HDC hdc)
 	rt = { 300, 600, 400, 200 };
 	DrawText(hdc, idStr, _tcslen(idStr),
 		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-	
+
 	SelectObject(hdc, OldFont);
 	DeleteObject(hFont);
 }
 
 
-void gameScene(HDC hdc)
+void gameScene(HDC hdc, HWND hWnd)
 {
 	HFONT hFont, OldFont;
 	hFont = CreateFont(30, 0, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0,
@@ -384,10 +412,9 @@ void gameScene(HDC hdc)
 	SelectObject(hdc, OldFont);
 	DeleteObject(hFont);
 
-	POINT centerCannon = { 300, 750 };
+	/*POINT centerCannon = { 300, 750 };
 	int lineCannon = 100;
 	POINT lineGun = { 20, 200 };
-	//radCannon = 30;
 	POINT gunP3 = { long(double(centerCannon.x) + lineGun.x*cos(2 * acos(0.0) / 180 * (radCannon))),
 		long(double(centerCannon.y) + lineGun.x*sin(2 * acos(0.0) / 180 * (radCannon))) };
 	POINT gunP4 = { long(double(centerCannon.x) - lineGun.x*cos(2 * acos(0.0) / 180 * (radCannon))),
@@ -400,22 +427,47 @@ void gameScene(HDC hdc)
 	gunP3, gunP4 };
 
 	Polygon(hdc, gun, 4);
-	//Arc(hdc, 200, 600, 400, 800, 400, 800, 200, 800);
-	/*Arc(hdc, centerCannon.x - lineCannon, centerCannon.y - lineCannon,
-		centerCannon.x + lineCannon, centerCannon.y + lineCannon,
-		centerCannon.x + lineCannon, centerCannon.y + lineCannon,
-		centerCannon.x - lineCannon, centerCannon.y + lineCannon);*/
 	Ellipse(hdc, centerCannon.x - lineCannon,
 		centerCannon.y - lineCannon,
 		centerCannon.x + lineCannon,
-		centerCannon.y + lineCannon);
-	
+		centerCannon.y + lineCannon);*/
 
+	cannon.update(radCannon);
+	cannon.show(hdc);
 
+	//bullet.show(hdc);
+	//SetTimer(hWnd, 2, 999, NULL);
 	for (unsigned short i = 0; i < blockCont.size(); i++)
 	{
-		blockCont[i]->show(hdc);
-		blockCont[i]->update();
+		//blockCont[i]->collision();
+		if (!(blockCont[i]->getIsExist()))
+		{
+			delete blockCont[i];
+			blockCont.erase(blockCont.begin() + i);
+		}
+
+		if (blockCont.size() > 0)
+		{
+			blockCont[i]->show(hdc);
+			blockCont[i]->update();
+		}
+	}
+
+
+	for (unsigned short i = 0; i < bulletCont.size(); i++)
+	{
+		bulletCont[i]->collision(blockCont);
+		if (!(bulletCont[i]->getIsExist()))
+		{	delete bulletCont[i];
+			bulletCont.erase(bulletCont.begin() + i);
+		}
+
+		if (bulletCont.size() > 0)
+		{
+			bulletCont[i]->update();
+			bulletCont[i]->show(hdc);
+			//bulletCont[i]->update();
+		}
 	}
 }
 
@@ -437,13 +489,13 @@ void DrawGrid(HDC hdc, int left, int top, int right, int bottom, int num)
 {
 	for (int i = 0; i <= ((right - left) / num); i++)
 	{
-		MoveToEx(hdc, left + i*num, top, NULL);
-		LineTo(hdc, left + i*num, bottom);
+		MoveToEx(hdc, left + i * num, top, NULL);
+		LineTo(hdc, left + i * num, bottom);
 	}
 	for (int i = 0; i <= ((bottom - top) / num); i++)
 	{
-		MoveToEx(hdc, left, top + i*num, NULL);
-		LineTo(hdc, right, top + i*num);
+		MoveToEx(hdc, left, top + i * num, NULL);
+		LineTo(hdc, right, top + i * num);
 	}
 }
 
@@ -472,8 +524,8 @@ void DrawStar(HDC hdc, int x, int y, int r)
 
 	for (int i = 0; i < 5; i++)
 		starP[0 + 2 * i] =
-	{ long(double(x) + r*cos(2 * acos(0.0) / 180 * (90 - 72 * i))),
-		long(double(y) - r*sin(2 * acos(0.0) / 180 * (90 - 72 * i))) };
+	{ long(double(x) + r * cos(2 * acos(0.0) / 180 * (90 - 72 * i))),
+		long(double(y) - r * sin(2 * acos(0.0) / 180 * (90 - 72 * i))) };
 
 	for (int i = 0; i < 5; i++)
 		starP[1 + 2 * i] =
@@ -493,9 +545,9 @@ POINT crammer(POINT p1, POINT p2, POINT p3, POINT p4)
 	d = -(p3.x - p4.x);
 	/*e = a*p1.x + b*p1.y;
 	f = c*p3.x + d*p3.y;*/
-	e = a*p4.x + b*p4.y;
-	f = c*p3.x + d*p3.y;
+	e = a * p4.x + b * p4.y;
+	f = c * p3.x + d * p3.y;
 
-	return{ (e*d - b*f) / (a*d - b*c),
-		(a*f - e*c) / (a*d - b*c) };
+	return{ (e*d - b * f) / (a*d - b * c),
+		(a*f - e * c) / (a*d - b * c) };
 }
