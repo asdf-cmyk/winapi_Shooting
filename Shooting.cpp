@@ -4,11 +4,13 @@
 #include "framework.h"
 #include "Shooting.h"
 #include "Block.h"
+#include "Life.h"
 #include "Cannon.h"
 #include "Bullet.h"
 #include <vector>
 #include <random>
 #include <memory>
+#include <fstream>
 
 using namespace std;
 
@@ -25,11 +27,6 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-void DrawGrid(HDC, int, int, int, int, int);
-void DrawCircle(HDC, double, double, double);
-int DrawFlower(HDC, int, int, int, int);
-void DrawStar(HDC, int, int, int);
-POINT crammer(POINT, POINT, POINT, POINT);
 int mkRand(int range)
 {
 	std::random_device rd;
@@ -37,25 +34,34 @@ int mkRand(int range)
 	std::uniform_int_distribution<int> dist(1, range);
 	return dist(mt);
 }
-
+void init(HWND);
 void startScene(HDC);
+void startToGame();
 void gameScene(HDC, HWND);
-void endScene(HDC);
+void gameToEnd();
+void endScene(HWND, HDC);
+void timer1(HWND);
+void timer2(HWND);
+void timer3(HWND);
+void quit(HWND);
+//void CALLBACK timer1(HWND, UINT, UINT, DWORD);
+//void CALLBACK timer2(HWND, UINT, UINT, DWORD);
+//void CALLBACK timer3(HWND, UINT, UINT, DWORD);
 
-static TCHAR idStr[4] = L"ABC";
-static int score;
+static int scene, sceneState, cnt;
+static TCHAR idStr[4];
+static int score = 0;
 static int radCannon = 0;
+static int timer1T;
+static string ranking[3];
+static int scoreRanking[3];
+
 vector<Block*> blockCont;
+vector<Life*> lifeCont;
 Cannon cannon;
 vector<Bullet*> bulletCont;
 RECT rectView;
-//Bullet bullet(cannon);
 
-
-void CALLBACK timer2(HWND hWnd, UINT uMsg, UINT idEvent, DWORD dwTime)
-{
-	bulletCont.push_back(new Bullet(cannon, rectView));
-}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -163,25 +169,19 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc;
-	//static int count, yPos, x, y, r3;
 	static int mx, my, frame, gameMode;
 	//static RECT rectView;
-	static int scene, sceneState, cnt;
+	//static int scene, sceneState, cnt;
 	/*static TCHAR idStr[4] = L"ABC";
 	static vector<Block*> rectCont;*/
-	static int timer2Flag = 0;
+	//static int timer2Flag = 0;
+	//static int radFlag = 0;
+	//static string rank;
 
 	switch (message)
 	{
 	case WM_CREATE:
-		GetClientRect(hWnd, &rectView);
-		//x = (rectView.left + rectView.right) / 2;
-		//y = (rectView.top + rectView.bottom) / 2;
-		sceneState = 2;
-		cnt = 0;
-		score = 0;
-		radCannon = 0;
-		//frame = 0;
+		init(hWnd);
 		break;
 	case WM_COMMAND:
 	{
@@ -206,19 +206,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: Add any drawing code that uses hdc here...
 
-		//WCHAR str[15] = L"가나다라abcd";
-		/*TCHAR str2[15] = _T("가나다라abcd");
-		TextOut(hdc, 100, 100, str2, _tcslen(str2));
-		RECT rc;
-		rc.left = 450;
-		rc.top = 0;
-		rc.right = 550;
-		rc.bottom = 100;
-		SetTextColor(hdc, RGB(255, 0, 255));
-		/*Rectangle(hdc, rt.left, rt.top, rt.right, rt.bottom);
-		DrawText(hdc, str, _tcslen(str), &rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-		*/
-
 		switch (sceneState)
 		{
 		case 1:
@@ -226,14 +213,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case 2:
 			gameScene(hdc, hWnd);
-			SetTimer(hWnd, 1, 1000, NULL);
-			//SetTimer(hWnd, 2, 999, (TIMERPROC)timer2);
-			SetTimer(hWnd, 2, 999, NULL);
+			break;
+		case 3:
+			endScene(hWnd, hdc);
 			break;
 		}
 
-		//SetTimer(hWnd, 1, 1000, NULL);
-		//SetTimer(hWnd, 2, 999, NULL);
 		EndPaint(hWnd, &ps);
 	}
 	break;
@@ -242,29 +227,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			mx = LOWORD(lParam);
 			my = HIWORD(lParam);
+			RECT rtRetry = { 0, 200, 400, 700 };
+			RECT rtQuit = { 300, 200, 500, 700 };
+			if (sceneState == 3)
+			{
+				if (mx > rtRetry.left && mx < rtRetry.right &&
+					my < rtRetry.bottom &&  my > rtRetry.top)
+				{
+					startToGame();
+					sceneState = 2;
+				}
 
+				if (mx > rtQuit.left && mx < rtQuit.right &&
+					my < rtQuit.bottom &&  my > rtQuit.top)
+					quit(hWnd);
+			}
 		}
 		InvalidateRgn(hWnd, NULL, TRUE);
 	}
 	break;
 	case WM_TIMER:
 	{
-		switch (wParam)
-		{
-		case 1:
-			POINT tmP;
-			for (int i = 0; i < 6; i++)
+		if (sceneState == 2)
+			switch (wParam)
 			{
-				int width = (rectView.right - rectView.left) / 6;
-				tmP = { width - width/2 + i*width + 2, 90 };
-				blockCont.push_back(new Block(tmP, width, 40));
+			case 1:
+				timer1(hWnd);
+				break;
+			case 2:
+				timer2(hWnd);
+				break;
+			case 3:
+				timer3(hWnd);
+				break;
 			}
-			break;
-		case 2:
-			//timer2Flag = 1;
-			bulletCont.push_back(new Bullet(cannon, rectView));
-			break;
-		} // wm_Param switch end
 	}
 	InvalidateRgn(hWnd, NULL, TRUE);
 	break;
@@ -284,7 +280,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			case VK_RETURN:
 				if (cnt > 0)
-					sceneState = 2;
+					startToGame();
+					//sceneState = 2;
 				break;
 			}
 			if (wParam >= 0x30 && wParam <= 0x5A)
@@ -303,6 +300,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (radCannon - 3 >= -60/* && timer2Flag*/)
 				{
 					radCannon -= 3;
+					//radFlag = -1;
 					//timer2Flag = 0;
 				}
 				break;
@@ -310,8 +308,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (radCannon + 3 <= 60 /* && timer2Flag*/)
 				{
 					radCannon += 3;
+					//radFlag = 1;
 					//timer2Flag = 0;
 				}
+				break;
+			case VK_RETURN:
+				gameToEnd();
+				//sceneState = 3;
 				break;
 			}
 			break;
@@ -326,16 +329,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 	case WM_DESTROY:
-		KillTimer(hWnd, 1);
-		KillTimer(hWnd, 2);
-		for (unsigned short i = 0; i < blockCont.size(); i++)
-			delete blockCont[i];
-		for (unsigned short i = 0; i < bulletCont.size(); i++)
-			delete bulletCont[i];
-
-		HideCaret(hWnd);
-		DestroyCaret();
-		PostQuitMessage(0);
+		quit(hWnd);
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
@@ -363,6 +357,37 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return (INT_PTR)FALSE;
 }
 
+
+void init(HWND hWnd)
+{
+	GetClientRect(hWnd, &rectView);
+	sceneState = 1;
+	cnt = 0;
+	score = 0;
+	radCannon = 0;
+	timer1T = 500;
+
+	ifstream readRank("rank.txt");
+	int i = 0;
+	while (!readRank.eof())
+	{
+		getline(readRank, ranking[i]);
+		i++;
+	}
+	readRank.close();
+
+	/*POINT tmP;
+	for (int i = 0; i < 6; i++)
+	{
+		int width = (rectView.right - rectView.left) / 6;
+		tmP = { width - width / 2 + i*width + 2, 720 };
+		lifeCont.push_back(new Life(tmP, width, 40));
+	}*/
+	SetTimer(hWnd, 1, 1000, NULL);
+	SetTimer(hWnd, 2, 750, NULL);
+	SetTimer(hWnd, 3, 60, NULL);
+}
+
 void startScene(HDC hdc)
 {
 	HFONT hFont, OldFont;
@@ -379,10 +404,10 @@ void startScene(HDC hdc)
 	(HFONT)SelectObject(hdc, hFont);
 	//TextOut(hdc, 200, 400, L"ID: ", _tcslen(L"ID: "));
 	//TextOut(hdc, 300, 400, id, _tcslen(id));
-	rt = { 0, 600, 400, 200 };
+	rt = { 0, 200, 400, 600 };
 	DrawText(hdc, L"ID: ", _tcslen(L"ID: "),
 		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
-	rt = { 300, 600, 400, 200 };
+	rt = { 280, 200, 420, 600 };
 	DrawText(hdc, idStr, _tcslen(idStr),
 		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
@@ -390,6 +415,21 @@ void startScene(HDC hdc)
 	DeleteObject(hFont);
 }
 
+void startToGame()
+{
+	score = 0;
+	radCannon = 0;
+	timer1T = 500;
+	POINT tmP;
+	for (int i = 0; i < 6; i++)
+	{
+		int width = (rectView.right - rectView.left) / 6;
+		tmP = { width - width / 2 + i*width + 2, 720 };
+		lifeCont.push_back(new Life(tmP, width, 40));
+	}
+
+	sceneState = 2;
+}
 
 void gameScene(HDC hdc, HWND hWnd)
 {
@@ -412,31 +452,139 @@ void gameScene(HDC hdc, HWND hWnd)
 	SelectObject(hdc, OldFont);
 	DeleteObject(hFont);
 
-	/*POINT centerCannon = { 300, 750 };
-	int lineCannon = 100;
-	POINT lineGun = { 20, 200 };
-	POINT gunP3 = { long(double(centerCannon.x) + lineGun.x*cos(2 * acos(0.0) / 180 * (radCannon))),
-		long(double(centerCannon.y) + lineGun.x*sin(2 * acos(0.0) / 180 * (radCannon))) };
-	POINT gunP4 = { long(double(centerCannon.x) - lineGun.x*cos(2 * acos(0.0) / 180 * (radCannon))),
-		long(double(centerCannon.y) - lineGun.x*sin(2 * acos(0.0) / 180 * (radCannon))) };
-	POINT gun[4] =
-	{ { long(double(gunP4.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
-	long(double(gunP4.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) },
-	{ long(double(gunP3.x) + lineGun.y*cos(2 * acos(0.0) / 180 * (90 - radCannon))),
-	long(double(gunP3.y) - lineGun.y*sin(2 * acos(0.0) / 180 * (90 - radCannon))) },
-	gunP3, gunP4 };
-
-	Polygon(hdc, gun, 4);
-	Ellipse(hdc, centerCannon.x - lineCannon,
-		centerCannon.y - lineCannon,
-		centerCannon.x + lineCannon,
-		centerCannon.y + lineCannon);*/
-
 	cannon.update(radCannon);
 	cannon.show(hdc);
 
-	//bullet.show(hdc);
-	//SetTimer(hWnd, 2, 999, NULL);
+	HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0));
+	HBRUSH OldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+	for (unsigned short i = 0; i < lifeCont.size(); i++)
+		lifeCont[i]->show(hdc);
+	SelectObject(hdc, OldBrush);
+	DeleteObject(hBrush);
+
+
+	for (unsigned short i = 0; i < bulletCont.size(); i++)
+		bulletCont[i]->show(hdc);
+	for (unsigned short i = 0; i < blockCont.size(); i++)
+		blockCont[i]->show(hdc);
+}
+
+void gameToEnd()
+{
+	bool rankFlag = 0;
+	int flagI = -1;
+	for (int i = 2; i >= 0; i--)
+	{
+		string tmpScore = ranking[i].substr(7, ranking[i].size());
+		scoreRanking[i] = stoi(tmpScore);
+		if (score >= scoreRanking[i])
+			flagI = i;
+	}
+
+	if (flagI != -1)
+	{
+		for (int i = 0; i < 2 - flagI; i++)
+		{
+			ranking[2 - i - 1][0]++;
+			ranking[2 - i] = ranking[2 - i - 1];
+		}
+		char buf[16];
+		sprintf(buf, "%d. %ls %d", flagI+1, idStr, score);
+		ranking[flagI] = buf;
+	}
+
+	ofstream writeRank("rank.txt");
+	for (int i = 0; i<3; i++)
+	{
+		writeRank << ranking[i];
+		writeRank << endl;
+	}
+	writeRank.close();
+
+
+	for (unsigned short i = 0; i < blockCont.size(); i++)
+		delete blockCont[i];
+	for (unsigned short i = 0; i < bulletCont.size(); i++)
+		delete bulletCont[i];
+	for (unsigned short i = 0; i < lifeCont.size(); i++)
+		delete lifeCont[i];
+	blockCont.clear();
+	bulletCont.clear();
+	lifeCont.clear();
+
+	sceneState = 3;
+}
+
+void endScene(HWND hWnd, HDC hdc)
+{
+	HFONT hFont, OldFont;
+	hFont = CreateFont(50, 30, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0,
+		VARIABLE_PITCH | FF_ROMAN, TEXT("HY엽서M"));
+	OldFont = (HFONT)SelectObject(hdc, hFont);
+	RECT rt = { 0, 0, 600, 200 };
+	for (int i = 0; i < 3; i++)
+	{
+		int len;
+		int slength = (int)ranking[i].length() + 1;
+		len = MultiByteToWideChar(CP_ACP, 0, ranking[i].c_str(), slength, 0, 0);
+		wchar_t* buf = new wchar_t[len];
+		MultiByteToWideChar(CP_ACP, 0, ranking[i].c_str(), slength, buf, len);
+		std::wstring r(buf);
+		delete[] buf;
+		
+		DrawText(hdc, r.c_str(), lstrlen(r.c_str()),
+			&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+		rt.bottom += 200;
+	}
+
+	hFont = CreateFont(50, 0, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0,
+		VARIABLE_PITCH | FF_ROMAN, TEXT("HY엽서M"));
+	(HFONT)SelectObject(hdc, hFont);
+	rt = { 0, 200, 400, 700 };
+	DrawText(hdc, L"RETRY", _tcslen(L"RETRY"),
+		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+	rt = { 300, 200, 500, 700 };
+	DrawText(hdc, L"QUIT", _tcslen(L"QUIT"),
+		&rt, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+
+	SelectObject(hdc, OldFont);
+	DeleteObject(hFont);
+}
+
+void timer1(HWND hWnd)
+{
+	POINT tmP;
+	int width = (rectView.right - rectView.left) / 6;
+	tmP = { width - width / 2 + (mkRand(6) - 1)*width + 2, 90 };
+	blockCont.push_back(new Block(tmP, width, 40, timer1T));
+
+	for (unsigned short i = 0; i < blockCont.size(); i++)
+	{
+		if (blockCont.size() > 0)
+		{
+			blockCont[i]->update();
+		}
+	}
+	InvalidateRgn(hWnd, NULL, TRUE);
+}
+
+void timer2(HWND hWnd)
+{
+	bulletCont.push_back(new Bullet(cannon, rectView));
+
+	for (unsigned short i = 0; i < bulletCont.size(); i++)
+	{
+		if (bulletCont.size() > 0)
+		{
+			bulletCont[i]->update();
+			//bulletCont[i]->show(hdc);
+		}
+	}
+	InvalidateRgn(hWnd, NULL, TRUE);
+}
+
+void timer3(HWND hWnd)
+{
 	for (unsigned short i = 0; i < blockCont.size(); i++)
 	{
 		//blockCont[i]->collision();
@@ -445,109 +593,43 @@ void gameScene(HDC hdc, HWND hWnd)
 			delete blockCont[i];
 			blockCont.erase(blockCont.begin() + i);
 		}
-
-		if (blockCont.size() > 0)
+	}
+	for (unsigned short i = 0; i < lifeCont.size(); i++)
+	{
+		lifeCont[i]->collision(blockCont);
+		if (!(lifeCont[i]->getIsExist()))
 		{
-			blockCont[i]->show(hdc);
-			blockCont[i]->update();
+			delete lifeCont[i];
+			lifeCont.erase(lifeCont.begin() + i);
+			if (lifeCont.size() < 1)
+			{
+				gameToEnd();
+			}
 		}
 	}
-
-
 	for (unsigned short i = 0; i < bulletCont.size(); i++)
 	{
-		bulletCont[i]->collision(blockCont);
+		bulletCont[i]->collision(blockCont, score);
 		if (!(bulletCont[i]->getIsExist()))
-		{	delete bulletCont[i];
+		{
+			delete bulletCont[i];
 			bulletCont.erase(bulletCont.begin() + i);
 		}
-
-		if (bulletCont.size() > 0)
-		{
-			bulletCont[i]->update();
-			bulletCont[i]->show(hdc);
-			//bulletCont[i]->update();
-		}
 	}
+	//InvalidateRgn(hWnd, NULL, TRUE);
 }
 
-
-//void startScene()
-//{
-//
-//}
-
-
-
-
-
-
-
-
-
-void DrawGrid(HDC hdc, int left, int top, int right, int bottom, int num)
+void quit(HWND hWnd)
 {
-	for (int i = 0; i <= ((right - left) / num); i++)
-	{
-		MoveToEx(hdc, left + i * num, top, NULL);
-		LineTo(hdc, left + i * num, bottom);
-	}
-	for (int i = 0; i <= ((bottom - top) / num); i++)
-	{
-		MoveToEx(hdc, left, top + i * num, NULL);
-		LineTo(hdc, right, top + i * num);
-	}
-}
+	KillTimer(hWnd, 1);
+	KillTimer(hWnd, 2);
+	KillTimer(hWnd, 3);
+	for (unsigned short i = 0; i < blockCont.size(); i++)
+		delete blockCont[i];
+	for (unsigned short i = 0; i < bulletCont.size(); i++)
+		delete bulletCont[i];
+	for (unsigned short i = 0; i < lifeCont.size(); i++)
+		delete lifeCont[i];
 
-void DrawCircle(HDC hdc, double centerX, double centerY, double r1)
-{
-	Ellipse(hdc, centerX - r1, centerY - r1, centerX + r1, centerY + r1);
-}
-
-int DrawFlower(HDC hdc, int centerX, int centerY, int r1, int petal)
-{
-	DrawCircle(hdc, centerX, centerY, r1);
-
-	double sinT = sin(2 * acos(0.0) / 180 * (180 / petal));
-	double r2 = (r1 * sinT) / (1 - sinT);
-	for (int i = 0; i < petal; i++)
-		DrawCircle(hdc,
-			centerX + (r1 + r2)*cos((2 * acos(0.0) / 180 * (90 - (360 / petal)*i))),
-			centerY + (r1 + r2)*sin((2 * acos(0.0) / 180 * (90 - (360 / petal)*i))),
-			r2);
-	return r1 + r2;
-}
-
-void DrawStar(HDC hdc, int x, int y, int r)
-{
-	POINT starP[10];
-
-	for (int i = 0; i < 5; i++)
-		starP[0 + 2 * i] =
-	{ long(double(x) + r * cos(2 * acos(0.0) / 180 * (90 - 72 * i))),
-		long(double(y) - r * sin(2 * acos(0.0) / 180 * (90 - 72 * i))) };
-
-	for (int i = 0; i < 5; i++)
-		starP[1 + 2 * i] =
-		crammer(starP[(0 + 2 * i) % 10], starP[(4 + 2 * i) % 10],
-			starP[(2 + 2 * i) % 10], starP[(8 + 2 * i) % 10]);
-
-	Polygon(hdc, starP, 10);
-}
-
-POINT crammer(POINT p1, POINT p2, POINT p3, POINT p4)
-{
-	long a, b, c, d, e, f;
-
-	a = p1.y - p2.y;
-	b = -(p1.x - p2.x);
-	c = p3.y - p4.y;
-	d = -(p3.x - p4.x);
-	/*e = a*p1.x + b*p1.y;
-	f = c*p3.x + d*p3.y;*/
-	e = a * p4.x + b * p4.y;
-	f = c * p3.x + d * p3.y;
-
-	return{ (e*d - b * f) / (a*d - b * c),
-		(a*f - e * c) / (a*d - b * c) };
+	PostQuitMessage(0);
 }

@@ -2,7 +2,7 @@
 #include "Block.h"
 
 
-Block::Block(POINT& cPt, int w, int h)
+Block::Block(POINT& cPt, int w, int h, int t)
 {
 	center.x = cPt.x;
 	center.y = cPt.y;
@@ -11,7 +11,7 @@ Block::Block(POINT& cPt, int w, int h)
 	width = w;
 	height = h;
 	speed.x = vectorX = 0;
-	speed.y = height/2 + 2;
+	speed.y = height/(t/500) + 2;
 	vectorY = 1;
 }
 

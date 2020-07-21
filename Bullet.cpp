@@ -3,7 +3,7 @@
 
 
 Bullet::Bullet(Cannon& cannon, RECT& rV)
-	: spawnDist(2*cannon.getLineG().x + 20), radBullet(cannon.getRad()), radius(30)
+	: spawnDist(2*cannon.getLineG().x + 20), radBullet(cannon.getRad()), radius(20)
 {
 	center.x = long(double(cannon.getCenterC().x) +
 		(cannon.getLineG().y + spawnDist)*cos(2 * acos(0.0) / 180 * (90-radBullet)));
@@ -11,7 +11,7 @@ Bullet::Bullet(Cannon& cannon, RECT& rV)
 		(cannon.getLineG().y + spawnDist)*sin(2 * acos(0.0) / 180 * (90-radBullet)));
 	
 	rectView = rV;
-	speed = { 10, 10 };
+	speed = { 50, 50 };
 	vectorX = cos(2 * acos(0.0) / 180 * (90 - radBullet));
 	vectorY = -sin(2 * acos(0.0) / 180 * (90 - radBullet));
 }
@@ -33,7 +33,7 @@ void Bullet::show(HDC hdc)
 		center.x + radius, center.y + radius);
 }
 
-void Bullet::collision(std::vector<Block*>& blockCont)
+void Bullet::collision(std::vector<Block*>& blockCont, int& score)
 {
 	if (center.x + radius < rectView.left || center.x - radius > rectView.right ||
 		center.y + radius < rectView.top || center.y - radius > rectView.bottom)
@@ -56,6 +56,7 @@ void Bullet::collision(std::vector<Block*>& blockCont)
 		{
 			isExist = 0;
 			blockCont[i]->setIsExist(0);
+			score += 100;
 		}
 		else if (colliCnt == 1 && (((center.x - radius >= (blockCont[i]->getCenter().x - blockCont[i]->getWidth() / 2)) &&
 			(center.x + radius <= (blockCont[i]->getCenter().x + blockCont[i]->getWidth() / 2))) ||
@@ -64,6 +65,7 @@ void Bullet::collision(std::vector<Block*>& blockCont)
 		{
 			isExist = 0;
 			blockCont[i]->setIsExist(0);
+			score += 100;
 		}
 
 		/*if (abs((center.y - (blockCont[i]->getCenter().y + blockCont[i]->getHeight() / 2))) <= radius)

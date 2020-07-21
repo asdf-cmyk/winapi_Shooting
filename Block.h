@@ -5,7 +5,7 @@ class Block : public Object
 {
 	int width, height;
 public:
-	Block(POINT&, int, int);
+	Block(POINT&, int, int, int);
 	~Block();
 	void collision(Object&) {};
 	//void update();

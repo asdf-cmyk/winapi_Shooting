@@ -12,6 +12,6 @@ public:
 	~Bullet();
 	//void update();
 	void show(HDC);
-	void collision(std::vector<Block*>&);
+	void collision(std::vector<Block*>&, int&);
 };
 
