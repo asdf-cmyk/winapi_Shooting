@@ -297,17 +297,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (wParam)
 			{
 			case 'A':
-				if (radCannon - 3 >= -60/* && timer2Flag*/)
+				if (radCannon - 5 >= -60/* && timer2Flag*/)
 				{
-					radCannon -= 3;
+					radCannon -= 5;
 					//radFlag = -1;
 					//timer2Flag = 0;
 				}
 				break;
 			case 'D':
-				if (radCannon + 3 <= 60 /* && timer2Flag*/)
+				if (radCannon + 5 <= 60 /* && timer2Flag*/)
 				{
-					radCannon += 3;
+					radCannon += 5;
 					//radFlag = 1;
 					//timer2Flag = 0;
 				}
@@ -368,6 +368,13 @@ void init(HWND hWnd)
 	timer1T = 500;
 
 	ifstream readRank("rank.txt");
+	if (!readRank.is_open())
+	{
+		ofstream writeRank("rank.txt");
+		writeRank << "1. --- 0\n2. --- 0\n3. --- 0";
+		writeRank.close();
+		readRank.open("rank.txt");
+	}
 	int i = 0;
 	while (!readRank.eof())
 	{
@@ -383,8 +390,8 @@ void init(HWND hWnd)
 		tmP = { width - width / 2 + i*width + 2, 720 };
 		lifeCont.push_back(new Life(tmP, width, 40));
 	}*/
-	SetTimer(hWnd, 1, 1000, NULL);
-	SetTimer(hWnd, 2, 750, NULL);
+	SetTimer(hWnd, 1, 300, NULL);
+	SetTimer(hWnd, 2, 500, NULL);
 	SetTimer(hWnd, 3, 60, NULL);
 }
 
@@ -588,6 +595,12 @@ void timer3(HWND hWnd)
 	for (unsigned short i = 0; i < blockCont.size(); i++)
 	{
 		//blockCont[i]->collision();
+		if (blockCont[i]->getCenter().y + blockCont[i]->getHeight() / 2 >
+			rectView.bottom)
+		{
+			gameToEnd();
+			break;
+		}
 		if (!(blockCont[i]->getIsExist()))
 		{
 			delete blockCont[i];
@@ -604,6 +617,7 @@ void timer3(HWND hWnd)
 			if (lifeCont.size() < 1)
 			{
 				gameToEnd();
+				break;
 			}
 		}
 	}

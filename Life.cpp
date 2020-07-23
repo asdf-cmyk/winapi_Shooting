@@ -36,6 +36,7 @@ void Life::collision(std::vector<Block*>& blockCont)
 			center.x + width / 2))
 		{
 			isExist = 0;
+			blockCont[i]->setIsExist(0);
 		}
 	}
 		
